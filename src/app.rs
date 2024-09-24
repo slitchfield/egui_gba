@@ -1,25 +1,28 @@
+use std::fs::File;
+use std::io::prelude::*;
+use egui::Color32;
+use egui::RichText;
+
+use crate::gba_emu::Gbaemu;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    value: f32,
+pub struct EmulatorApp {
+    #[serde(skip)]
+    device: Gbaemu,
 }
 
-impl Default for TemplateApp {
+impl Default for EmulatorApp {
     fn default() -> Self {
         Self {
             // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
+            device: Gbaemu::default(),
         }
     }
 }
 
-impl TemplateApp {
+impl EmulatorApp {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
@@ -30,12 +33,11 @@ impl TemplateApp {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
-
         Default::default()
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for EmulatorApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -61,49 +63,54 @@ impl eframe::App for TemplateApp {
                     ui.add_space(16.0);
                 }
 
-                egui::widgets::global_dark_light_mode_buttons(ui);
+                //egui::widgets::global_dark_light_mode_buttons(ui);
+                ctx.set_visuals(egui::style::Visuals::dark());
             });
+        });
+        const STATE_WIDTH: f32 = 300f32;
+        egui::SidePanel::left("processor_state").show_separator_line(true).resizable(false).default_width(STATE_WIDTH as f32).show(ctx, |ui| {
+            ui.heading("Processor State:");
+            ui.text_edit_multiline(&mut self.device.get_core_state());
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
-            ui.heading("eframe template");
+            ui.heading("egui GBA Emulator");
 
             ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(&mut self.label);
+                ui.label("Controls");
             });
-
-            ui.add(egui::Slider::new(&mut self.value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                self.value += 1.0;
+ 
+            if ui.button("Open File").clicked() {
+                let open_file: String;
+                let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
+                    None => {
+                        //open_file = "null".to_string();
+                        Err("No file provided".to_string())
+                    }
+                    Some(file) => {
+                        open_file = file.clone();
+                        let mut handle = File::open(file).expect("Could not open file");
+                        let mut rom_buf: Vec<u8> = vec![];
+                        handle.read_to_end(&mut rom_buf).expect("Could not read from file");
+                        self.device.load_rom(open_file, &rom_buf);
+                        Ok(())
+                    }
+                };
             }
 
             ui.separator();
+            ui.label(RichText::new("Memory View").color(Color32::GREEN));
+            use pretty_hex::*;
+            let cfg = HexConfig {title: false, width: 8, group: 4, max_bytes: 32, ..HexConfig::default() };
 
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/main/",
-                "Source code."
-            ));
+            ui.label(RichText::new(config_hex(self.device.get_rom_bytes(), cfg)).family(egui::FontFamily::Monospace));
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                powered_by_egui_and_eframe(ui);
-                egui::warn_if_debug_build(ui);
+                ui.label(self.device.get_status());
+                ui.separator();
             });
         });
     }
 }
 
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
-}
