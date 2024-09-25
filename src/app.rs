@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::prelude::*;
 use egui::Color32;
 use egui::RichText;
+use std::fs::File;
+use std::io::prelude::*;
 
 use crate::gba_emu::Gbaemu;
 
@@ -68,10 +68,17 @@ impl eframe::App for EmulatorApp {
             });
         });
         const STATE_WIDTH: f32 = 300f32;
-        egui::SidePanel::left("processor_state").show_separator_line(true).resizable(false).default_width(STATE_WIDTH as f32).show(ctx, |ui| {
-            ui.heading("Processor State:");
-            ui.text_edit_multiline(&mut self.device.get_core_state());
-        });
+        egui::SidePanel::left("processor_state")
+            .show_separator_line(true)
+            .resizable(false)
+            .default_width(STATE_WIDTH as f32)
+            .show(ctx, |ui| {
+                ui.heading("Processor State:");
+                ui.add(
+                    egui::TextEdit::multiline(&mut self.device.get_core_state())
+                        .font(egui::TextStyle::Monospace),
+                );
+            });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
@@ -80,7 +87,7 @@ impl eframe::App for EmulatorApp {
             ui.horizontal(|ui| {
                 ui.label("Controls");
             });
- 
+
             if ui.button("Open File").clicked() {
                 let open_file: String;
                 let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
@@ -92,7 +99,9 @@ impl eframe::App for EmulatorApp {
                         open_file = file.clone();
                         let mut handle = File::open(file).expect("Could not open file");
                         let mut rom_buf: Vec<u8> = vec![];
-                        handle.read_to_end(&mut rom_buf).expect("Could not read from file");
+                        handle
+                            .read_to_end(&mut rom_buf)
+                            .expect("Could not read from file");
                         self.device.load_rom(open_file, &rom_buf);
                         Ok(())
                     }
@@ -102,9 +111,18 @@ impl eframe::App for EmulatorApp {
             ui.separator();
             ui.label(RichText::new("Memory View").color(Color32::GREEN));
             use pretty_hex::*;
-            let cfg = HexConfig {title: false, width: 8, group: 4, max_bytes: 32, ..HexConfig::default() };
+            let cfg = HexConfig {
+                title: false,
+                width: 8,
+                group: 4,
+                max_bytes: 32,
+                ..HexConfig::default()
+            };
 
-            ui.label(RichText::new(config_hex(self.device.get_rom_bytes(), cfg)).family(egui::FontFamily::Monospace));
+            ui.label(
+                RichText::new(config_hex(self.device.get_rom_bytes(), cfg))
+                    .family(egui::FontFamily::Monospace),
+            );
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
                 ui.label(self.device.get_status());
@@ -113,4 +131,3 @@ impl eframe::App for EmulatorApp {
         });
     }
 }
-

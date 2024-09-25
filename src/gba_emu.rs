@@ -1,4 +1,3 @@
-
 use std::path::PathBuf;
 
 use crate::arm7tdmi::{self, Arm7TDMI};
@@ -28,7 +27,11 @@ impl Gbaemu {
     pub fn load_rom(&mut self, rompath: String, rombytes: &Vec<u8>) -> () {
         self.rompath = PathBuf::from(rompath.clone());
         self.rombytes = rombytes.clone();
-        self.status_bar = format!("{:04x} | Loading file: \"{}\"", self.arm_core.get_cpsr(), rompath);
+        self.status_bar = format!(
+            "{:04x} | Loading file: \"{}\"",
+            self.arm_core.get_cpsr(),
+            rompath
+        );
     }
 
     pub fn get_rom_bytes(&self) -> &Vec<u8> {
