@@ -5,6 +5,7 @@ use crate::arm7tdmi::{self, Arm7TDMI};
 pub struct Gbaemu {
     rompath: PathBuf,
     rombytes: Vec<u8>,
+    biosrombytes: Vec<u8>,
     status_bar: String,
 
     arm_core: arm7tdmi::Arm7TDMI,
@@ -15,6 +16,7 @@ impl Default for Gbaemu {
         Self {
             rompath: PathBuf::new(),
             rombytes: vec![],
+            biosrombytes: vec![],
 
             status_bar: String::new(),
 
@@ -32,6 +34,12 @@ impl Gbaemu {
             self.arm_core.get_cpsr(),
             rompath
         );
+    }
+
+    pub fn load_bios_rom(&mut self, rompath: String, rombytes: &Vec<u8>) -> Result<(), &'static str> {
+        self.rompath = PathBuf::from(rompath.clone());
+        self.biosrombytes = rombytes.clone();
+        self.arm_core.load_bios_rom(&self.biosrombytes)
     }
 
     pub fn get_rom_bytes(&self) -> &Vec<u8> {

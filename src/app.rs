@@ -88,7 +88,26 @@ impl eframe::App for EmulatorApp {
                 ui.label("Controls");
             });
 
-            if ui.button("Open File").clicked() {
+            if ui.button("Load BIOS File").clicked() {
+                let open_file: String;
+                let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
+                    None => {
+                        //open_file = "null".to_string();
+                        Err("No file provided".to_string())
+                    }
+                    Some(file) => {
+                        open_file = file.clone();
+                        let mut handle = File::open(file).expect("Could not open file");
+                        let mut rom_buf: Vec<u8> = vec![];
+                        handle
+                            .read_to_end(&mut rom_buf)
+                            .expect("Could not read from file");
+                        self.device.load_bios_rom(open_file, &rom_buf).map_err(|e| e.into()) // Convert R<_, &str> to R<_, String>
+                    }
+                };
+            }
+
+            if ui.button("Open ROM File").clicked() {
                 let open_file: String;
                 let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
                     None => {

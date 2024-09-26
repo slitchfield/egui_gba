@@ -1,4 +1,3 @@
-
 pub fn set_bits(input: u32, offset: u8, num: u8, bits: u32) -> u32 {
     let mut mask: u32 = ((1 << num) - 1) as u32;
     let mut new_val = bits & mask;
