@@ -28,7 +28,15 @@ impl Memory {
         // TODO: pull from different memory regions based on address?
         self.bios_rom[address]
     }
-    
+
+    pub fn advance_mem_cursor(&mut self) {
+        self.print_cursor = self.print_cursor.saturating_add(8);
+    }
+
+    pub fn regress_mem_cursor(&mut self) {
+        self.print_cursor = self.print_cursor.saturating_sub(8);
+    }
+
     pub fn print_memory(&self, num_bytes: usize) -> String {
         let mut ret_str: String = String::new();
         let num_lines = num_bytes / 8;

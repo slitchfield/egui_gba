@@ -53,4 +53,12 @@ impl Gbaemu {
     pub fn get_core_state(&self) -> String {
         self.arm_core.print_state()
     }
+
+    pub fn advance_mem_cursor(&mut self) {
+        self.arm_core.memory.advance_mem_cursor()
+    }
+    
+    pub fn regress_mem_cursor(&mut self) {
+        self.arm_core.memory.regress_mem_cursor()
+    }
 }

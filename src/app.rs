@@ -48,6 +48,13 @@ impl eframe::App for EmulatorApp {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+            self.device.advance_mem_cursor()
+        }
+
+        if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+            self.device.regress_mem_cursor()
+        }
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
