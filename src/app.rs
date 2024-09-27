@@ -56,13 +56,15 @@ impl eframe::App for EmulatorApp {
             self.device.regress_mem_cursor()
         }
         // Quit if q is pressed
-        if ctx.input(|i| i.key_pressed(egui::Key::Q) ) {
+        if ctx.input(|i| i.key_pressed(egui::Key::Q)) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
         // Tick clock if space is pressed
         if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
-            self.device.tick_clock(1).expect("Error thrown when executing system clock tick")
+            self.device
+                .tick_clock(1)
+                .expect("Error thrown when executing system clock tick")
         }
 
         if ctx.input(|i| i.key_pressed(egui::Key::R)) {
@@ -154,7 +156,8 @@ impl eframe::App for EmulatorApp {
             ui.label(RichText::new("Execution View").color(Color32::GREEN));
             ui.add(
                 egui::TextEdit::multiline(&mut self.device.get_execution_state())
-                    .font(egui::TextStyle::Monospace).desired_width(640.0),
+                    .font(egui::TextStyle::Monospace)
+                    .desired_width(640.0),
             );
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {

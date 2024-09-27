@@ -14,19 +14,27 @@ pub enum OpMode {
 }
 
 #[derive(Debug, Default)]
-pub enum ProcessorState{
+pub enum ProcessorState {
     #[default]
     Idle,
-    Executing { instr: instruction::Instruction },
+    Executing {
+        instr: instruction::Instruction,
+    },
 }
 
 use std::fmt;
 impl fmt::Display for ProcessorState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Idle => { write!(f, "Idle") },
-            Self::Executing { instr: _ } => {write!(f, "Executing") },
-            _ => { unimplemented!() }
+            Self::Idle => {
+                write!(f, "Idle")
+            }
+            Self::Executing { instr: _ } => {
+                write!(f, "Executing")
+            }
+            _ => {
+                unimplemented!()
+            }
         }
     }
 }
@@ -91,21 +99,26 @@ impl Arm7TDMI {
     }
 
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
-        if num_ticks > 1 { unimplemented!() } // TODO: Add support for running multiple cycles at once
-
-        println!("Running armcore clock tick!");
+        if num_ticks > 1 {
+            unimplemented!()
+        } // TODO: Add support for running multiple cycles at once
 
         match self.procstate {
             ProcessorState::Idle => {
                 // Fetch instruction and begin executing
-                let cur_pc = self.regfile.get_register(&self.opmode, 15).ok_or("Could not retrieve PC?")?;
+                let cur_pc = self
+                    .regfile
+                    .get_register(&self.opmode, 15)
+                    .ok_or("Could not retrieve PC?")?;
                 let raw_instr = self.memory.get_word(cur_pc as usize);
-                self.procstate = ProcessorState::Executing { instr: instruction::Instruction::from_bytes(raw_instr) } ;
+                self.procstate = ProcessorState::Executing {
+                    instr: instruction::Instruction::from_bytes(raw_instr),
+                };
             }
-            ProcessorState::Executing{instr: _} => {
-
+            ProcessorState::Executing { instr: _ } => {}
+            _ => {
+                unimplemented!()
             }
-            _ => { unimplemented!() } 
         }
 
         self.clock_cycle += 1usize;
@@ -242,8 +255,10 @@ impl Arm7TDMI {
         ret_str.push_str(format!("Clock Cycle: {}\n", self.clock_cycle).as_str());
 
         match &self.procstate {
-            ProcessorState::Idle => { },
-            ProcessorState::Executing { instr } => { ret_str.push_str(format!("Cur instr:\n{}", instr).as_str()); }
+            ProcessorState::Idle => {}
+            ProcessorState::Executing { instr } => {
+                ret_str.push_str(format!("Cur instr:\n{}", instr).as_str());
+            }
         }
 
         ret_str

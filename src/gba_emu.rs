@@ -49,10 +49,12 @@ impl Gbaemu {
     pub fn reset(&mut self) {
         println!("Resetting system...");
         self.arm_core.reset()
-    } 
+    }
 
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
-        if num_ticks > 1 { unimplemented!() } // TODO: Add support for running multiple cycles at once
+        if num_ticks > 1 {
+            unimplemented!()
+        } // TODO: Add support for running multiple cycles at once
 
         self.arm_core.tick_clock(num_ticks)
     }
