@@ -18,7 +18,9 @@ pub enum ProcessorState {
     #[default]
     Idle,
     Executing {
-        instr: instruction::Instruction,
+        fetch_instr: instruction::Instruction,
+        decode_instr: instruction::Instruction,
+        exec_instr: instruction::Instruction,
     },
 }
 
@@ -29,7 +31,7 @@ impl fmt::Display for ProcessorState {
             Self::Idle => {
                 write!(f, "Idle")
             }
-            Self::Executing { instr: _ } => {
+            Self::Executing { .. } => {
                 write!(f, "Executing")
             }
             _ => {
@@ -112,10 +114,12 @@ impl Arm7TDMI {
                     .ok_or("Could not retrieve PC?")?;
                 let raw_instr = self.memory.get_word(cur_pc as usize);
                 self.procstate = ProcessorState::Executing {
-                    instr: instruction::Instruction::from_bytes(raw_instr),
+                    fetch_instr: instruction::Instruction::from_bytes(raw_instr),
+                    decode_instr: instruction::Instruction::default(),
+                    exec_instr: instruction::Instruction::default(),
                 };
             }
-            ProcessorState::Executing { instr: _ } => {}
+            ProcessorState::Executing { .. } => {}
             _ => {
                 unimplemented!()
             }
@@ -256,8 +260,8 @@ impl Arm7TDMI {
 
         match &self.procstate {
             ProcessorState::Idle => {}
-            ProcessorState::Executing { instr } => {
-                ret_str.push_str(format!("Cur instr:\n{}", instr).as_str());
+            ProcessorState::Executing { fetch_instr, decode_instr, exec_instr } => {
+                ret_str.push_str(format!("Cur instrs:\nFET: {}\nDEC: {}\nEXE: {}\n", fetch_instr, decode_instr, exec_instr).as_str());
             }
         }
 

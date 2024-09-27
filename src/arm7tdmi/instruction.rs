@@ -86,6 +86,10 @@ impl fmt::Display for InstrPayload {
             Self::BranchAndLink { offset } => {
                 write!(f, "Branch And Link (offset = {:#08x})", offset)
             }
+            _ => {
+                println!("Tried to print instruction enum {:?}", self);
+                unimplemented!()
+            }
         }
     }
 }
