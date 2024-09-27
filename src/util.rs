@@ -17,3 +17,16 @@ pub fn get_bits(input: u32, offset: u8, num: u8) -> u32 {
     output >>= offset;
     output
 }
+
+pub fn get_halfword(byte_array: &[u8], address: usize) -> u16 {
+    // Assumes address sanitization and translation has already occurred.
+    // I.e., this method just uses address to generate successive indices to `byte_array`
+    ((byte_array[address + 1] as u16) << 8) | (byte_array[address] as u16)
+}
+
+pub fn get_word(byte_array: &[u8], address: usize) -> u32 {
+    ((byte_array[address + 3] as u32) << 24)
+        | ((byte_array[address + 2] as u32) << 16)
+        | ((byte_array[address + 1] as u32) << 8)
+        | (byte_array[address] as u32)
+}

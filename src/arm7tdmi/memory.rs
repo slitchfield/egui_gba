@@ -1,3 +1,5 @@
+use crate::util::{get_halfword, get_word};
+
 pub struct Memory {
     print_cursor: usize,
     bios_rom: [u8; 16384],
@@ -25,22 +27,25 @@ impl Memory {
 
     pub fn get_byte(&self, address: usize) -> u8 {
         // TODO: pull from different memory regions based on address?
-        self.bios_rom[address]
+        const BIOS_END: usize = 1usize << 12 - 1;
+        match address {
+            0..=BIOS_END => self.bios_rom[address],
+            _ => {
+                unimplemented!()
+            }
+        }
     }
 
     pub fn get_halfword(&self, address: usize) -> u16 {
         // TODO: pull from different memory regions
         let address = address & (!1usize); // Mask off lowest bit to ensure alignment
-        ((self.bios_rom[address + 1] as u16) << 8) | (self.bios_rom[address] as u16)
+        get_halfword(&self.bios_rom, address)
     }
 
     pub fn get_word(&self, address: usize) -> u32 {
         // TODO: pull from different memory regions
         let address = address & (!3usize); // Mask off lowest two bits to ensure alignment
-        ((self.bios_rom[address + 3] as u32) << 24)
-            | ((self.bios_rom[address + 2] as u32) << 16)
-            | ((self.bios_rom[address + 1] as u32) << 8)
-            | (self.bios_rom[address] as u32)
+        get_word(&self.bios_rom, address)
     }
 
     pub fn advance_mem_cursor(&mut self) {
