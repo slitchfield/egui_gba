@@ -2,7 +2,7 @@ mod memory;
 mod regfile;
 
 #[derive(Debug)]
-pub enum Status {
+pub enum OpMode {
     User,
     _Fiq,
     Supervisor,
@@ -13,7 +13,7 @@ pub enum Status {
 }
 
 pub struct Arm7TDMI {
-    pub status: Status,
+    pub opmode: OpMode,
     pub regfile: regfile::RegFile,
     pub memory: memory::Memory,
 }
@@ -21,7 +21,7 @@ pub struct Arm7TDMI {
 impl Default for Arm7TDMI {
     fn default() -> Self {
         let mut constructed_val = Self {
-            status: Status::User,
+            opmode: OpMode::User,
             regfile: regfile::RegFile::default(),
             memory: memory::Memory::default(),
         };
@@ -44,14 +44,14 @@ impl Arm7TDMI {
         // When nRESET goes HIGH again, the ARM7TDMI processor:
         // 1. Overwrites R14_svc and SPSR_svc by copying the current values of the PC and
         // CPSR into them. The values of the PC and CPSR are indeterminate.
-        let cur_pc = self.regfile.get_register(&self.status, 15).unwrap();
+        let cur_pc = self.regfile.get_register(&self.opmode, 15).unwrap();
         let cur_cpsr = self.get_cpsr();
         self.regfile.r14_svc = cur_pc;
         self.regfile.spsr_svc = cur_cpsr;
 
         // 2. Forces M[4:0] to b10011, Supervisor mode, sets the I and F bits, and clears the
         // T-bit in the CPSR.
-        let _ = self.set_mode(Status::Supervisor);
+        let _ = self.set_mode(OpMode::Supervisor);
         let _ = self.disable_fiq();
         let _ = self.disable_irq();
         let _ = self.enter_arm_mode();
@@ -65,116 +65,116 @@ impl Arm7TDMI {
 
     pub fn print_state(&self) -> String {
         let mut ret_str: String = String::new();
-        ret_str.push_str(format!("Current State: {:?}\n", &self.status).as_str());
+        ret_str.push_str(format!("Current State: {:?}\n", &self.opmode).as_str());
         ret_str.push_str(
             format!(
                 "R0:  {:08x}\t",
-                self.regfile.get_register(&self.status, 0u8).unwrap()
+                self.regfile.get_register(&self.opmode, 0u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R8:  {:08x}\n",
-                self.regfile.get_register(&self.status, 8u8).unwrap()
+                self.regfile.get_register(&self.opmode, 8u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R1:  {:08x}\t",
-                self.regfile.get_register(&self.status, 1u8).unwrap()
+                self.regfile.get_register(&self.opmode, 1u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R9:  {:08x}\n",
-                self.regfile.get_register(&self.status, 9u8).unwrap()
+                self.regfile.get_register(&self.opmode, 9u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R2:  {:08x}\t",
-                self.regfile.get_register(&self.status, 2u8).unwrap()
+                self.regfile.get_register(&self.opmode, 2u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R10: {:08x}\n",
-                self.regfile.get_register(&self.status, 10u8).unwrap()
+                self.regfile.get_register(&self.opmode, 10u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R3:  {:08x}\t",
-                self.regfile.get_register(&self.status, 3u8).unwrap()
+                self.regfile.get_register(&self.opmode, 3u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R11: {:08x}\n",
-                self.regfile.get_register(&self.status, 11u8).unwrap()
+                self.regfile.get_register(&self.opmode, 11u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R4:  {:08x}\t",
-                self.regfile.get_register(&self.status, 4u8).unwrap()
+                self.regfile.get_register(&self.opmode, 4u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R12: {:08x}\n",
-                self.regfile.get_register(&self.status, 12u8).unwrap()
+                self.regfile.get_register(&self.opmode, 12u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R5:  {:08x}\t",
-                self.regfile.get_register(&self.status, 5u8).unwrap()
+                self.regfile.get_register(&self.opmode, 5u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R13: {:08x}\n",
-                self.regfile.get_register(&self.status, 13u8).unwrap()
+                self.regfile.get_register(&self.opmode, 13u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R6:  {:08x}\t",
-                self.regfile.get_register(&self.status, 6u8).unwrap()
+                self.regfile.get_register(&self.opmode, 6u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R14: {:08x}\n",
-                self.regfile.get_register(&self.status, 14u8).unwrap()
+                self.regfile.get_register(&self.opmode, 14u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R7:  {:08x}\t",
-                self.regfile.get_register(&self.status, 7u8).unwrap()
+                self.regfile.get_register(&self.opmode, 7u8).unwrap()
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R15: {:08x}\n",
-                self.regfile.get_register(&self.status, 15u8).unwrap()
+                self.regfile.get_register(&self.opmode, 15u8).unwrap()
             )
             .as_str(),
         );
@@ -191,9 +191,9 @@ impl Arm7TDMI {
         return self.regfile.get_cpsr();
     }
 
-    pub fn set_mode(&mut self, status: Status) -> Result<(), &'static str> {
-        self.status = status;
-        self.regfile.set_mode(&self.status)
+    pub fn set_mode(&mut self, opmode: OpMode) -> Result<(), &'static str> {
+        self.opmode = opmode;
+        self.regfile.set_cpsr_mode(&self.opmode)
     }
 
     pub fn disable_fiq(&mut self) -> Result<(), &'static str> {

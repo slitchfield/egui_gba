@@ -1,4 +1,4 @@
-use crate::arm7tdmi::Status;
+use crate::arm7tdmi::OpMode;
 use crate::util;
 
 #[derive(Default)]
@@ -48,10 +48,10 @@ pub struct RegFile {
 }
 
 impl RegFile {
-    pub fn get_register(&self, mode: &Status, idx: u8) -> Option<u32> {
+    pub fn get_register(&self, mode: &OpMode, idx: u8) -> Option<u32> {
         assert!(idx <= 15);
         match mode {
-            Status::User => match idx {
+            OpMode::User => match idx {
                 0 => Some(self.r0),
                 1 => Some(self.r1),
                 2 => Some(self.r2),
@@ -71,7 +71,7 @@ impl RegFile {
 
                 _ => unimplemented!(),
             },
-            Status::Supervisor => match idx {
+            OpMode::Supervisor => match idx {
                 0 => Some(self.r0),
                 1 => Some(self.r1),
                 2 => Some(self.r2),
@@ -108,10 +108,10 @@ impl RegFile {
         self.r15_pc = new_pc;
     }
 
-    pub fn set_mode(&mut self, mode: &Status) -> Result<(), &'static str> {
+    pub fn set_cpsr_mode(&mut self, mode: &OpMode) -> Result<(), &'static str> {
         match mode {
-            Status::User => self.set_cpsr_bits(0, 5, 0b10000),
-            Status::Supervisor => self.set_cpsr_bits(0, 5, 0b10011),
+            OpMode::User => self.set_cpsr_bits(0, 5, 0b10000),
+            OpMode::Supervisor => self.set_cpsr_bits(0, 5, 0b10011),
             _ => {
                 unimplemented!()
             }
