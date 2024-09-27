@@ -55,6 +55,11 @@ impl eframe::App for EmulatorApp {
         if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
             self.device.regress_mem_cursor()
         }
+        // Quit if q is pressed
+        if ctx.input(|i| i.key_pressed(egui::Key::Q) ) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
