@@ -60,6 +60,11 @@ impl eframe::App for EmulatorApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
+        // Tick clock if space is pressed
+        if ctx.input(|i| i.key_pressed(egui::Key::Space)) {
+            self.device.tick_clock(1).expect("Error thrown when executing system clock tick")
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -142,19 +147,10 @@ impl eframe::App for EmulatorApp {
             }
 
             ui.separator();
-            ui.label(RichText::new("Memory View").color(Color32::GREEN));
-            use pretty_hex::*;
-            let cfg = HexConfig {
-                title: false,
-                width: 8,
-                group: 4,
-                max_bytes: 32,
-                ..HexConfig::default()
-            };
-
-            ui.label(
-                RichText::new(config_hex(self.device.get_rom_bytes(), cfg))
-                    .family(egui::FontFamily::Monospace),
+            ui.label(RichText::new("Execution View").color(Color32::GREEN));
+            ui.add(
+                egui::TextEdit::multiline(&mut self.device.get_execution_state())
+                    .font(egui::TextStyle::Monospace).desired_width(640.0),
             );
 
             ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {

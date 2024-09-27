@@ -45,6 +45,12 @@ impl Gbaemu {
         self.biosrombytes = rombytes.clone();
         self.arm_core.load_bios_rom(&self.biosrombytes)
     }
+    
+    pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
+        if num_ticks > 1 { unimplemented!() } // TODO: Add support for running multiple cycles at once
+
+        self.arm_core.tick_clock(num_ticks)
+    }
 
     pub fn get_rom_bytes(&self) -> &Vec<u8> {
         &self.rombytes
@@ -56,6 +62,10 @@ impl Gbaemu {
 
     pub fn get_core_state(&self) -> String {
         self.arm_core.print_state()
+    }
+
+    pub fn get_execution_state(&self) -> String {
+        self.arm_core.print_exec_state()
     }
 
     pub fn advance_mem_cursor(&mut self) {

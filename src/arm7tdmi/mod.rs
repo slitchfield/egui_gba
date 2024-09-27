@@ -1,3 +1,4 @@
+mod instruction;
 mod memory;
 mod regfile;
 
@@ -12,10 +13,29 @@ pub enum OpMode {
     _Undefined,
 }
 
+#[derive(Debug, Default)]
+pub enum ProcessorState{
+    #[default]
+    Idle,
+    Executing { instr: instruction::Instruction },
+}
+
+use std::fmt;
+impl fmt::Display for ProcessorState {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Idle => { write!(f, "Idle") },
+            Self::Executing { instr: _ } => {write!(f, "Executing") },
+            _ => { unimplemented!() }
+        }
+    }
+}
+
 pub struct Arm7TDMI {
     pub opmode: OpMode,
     pub regfile: regfile::RegFile,
     pub memory: memory::Memory,
+    pub procstate: ProcessorState,
 }
 
 impl Default for Arm7TDMI {
@@ -24,6 +44,7 @@ impl Default for Arm7TDMI {
             opmode: OpMode::User,
             regfile: regfile::RegFile::default(),
             memory: memory::Memory::default(),
+            procstate: ProcessorState::Idle,
         };
         constructed_val.reset();
         constructed_val
@@ -63,6 +84,25 @@ impl Arm7TDMI {
         // After reset, all register values except the PC and CPSR are indeterminate.
     }
 
+    pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
+        if num_ticks > 1 { unimplemented!() } // TODO: Add support for running multiple cycles at once
+
+        println!("Running armcore clock tick!");
+
+        match self.procstate {
+            ProcessorState::Idle => {
+                // Fetch instruction and begin executing
+                let cur_pc = self.regfile.get_register(&self.opmode, 15).ok_or("Could not retrieve PC?")?;
+                let raw_instr = self.memory.get_word(cur_pc as usize);
+                self.procstate = ProcessorState::Executing { instr: instruction::Instruction::from_bytes(raw_instr) } ;
+            }
+            ProcessorState::Executing{instr: _} => {
+
+            }
+            _ => { unimplemented!() } 
+        }
+        Ok(())
+    }
     pub fn print_state(&self) -> String {
         let mut ret_str: String = String::new();
         ret_str.push_str(format!("Current State: {:?}\n", &self.opmode).as_str());
@@ -187,6 +227,18 @@ impl Arm7TDMI {
         return ret_str;
     }
 
+    pub fn print_exec_state(&self) -> String {
+        let mut ret_str = String::new();
+
+        ret_str.push_str(format!("Current Exec State: {}\n", self.procstate).as_str());
+
+        match &self.procstate {
+            ProcessorState::Idle => { },
+            ProcessorState::Executing { instr } => { ret_str.push_str(format!("Cur instr: {:?}", instr).as_str()); }
+        }
+
+        ret_str
+    }
     pub fn get_cpsr(&self) -> u32 {
         return self.regfile.get_cpsr();
     }
