@@ -32,6 +32,7 @@ impl fmt::Display for ProcessorState {
 }
 
 pub struct Arm7TDMI {
+    pub clock_cycle: usize,
     pub opmode: OpMode,
     pub regfile: regfile::RegFile,
     pub memory: memory::Memory,
@@ -41,6 +42,7 @@ pub struct Arm7TDMI {
 impl Default for Arm7TDMI {
     fn default() -> Self {
         let mut constructed_val = Self {
+            clock_cycle: 0usize,
             opmode: OpMode::User,
             regfile: regfile::RegFile::default(),
             memory: memory::Memory::default(),
@@ -82,6 +84,10 @@ impl Arm7TDMI {
 
         // 4. Reverts to ARM state if necessary and resumes execution.
         // After reset, all register values except the PC and CPSR are indeterminate.
+
+        // Reset emulation specific structures
+        self.clock_cycle = 0usize;
+        self.procstate = ProcessorState::Idle;
     }
 
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
@@ -101,6 +107,8 @@ impl Arm7TDMI {
             }
             _ => { unimplemented!() } 
         }
+
+        self.clock_cycle += 1usize;
         Ok(())
     }
     pub fn print_state(&self) -> String {
@@ -231,10 +239,11 @@ impl Arm7TDMI {
         let mut ret_str = String::new();
 
         ret_str.push_str(format!("Current Exec State: {}\n", self.procstate).as_str());
+        ret_str.push_str(format!("Clock Cycle: {}\n", self.clock_cycle).as_str());
 
         match &self.procstate {
             ProcessorState::Idle => { },
-            ProcessorState::Executing { instr } => { ret_str.push_str(format!("Cur instr: {:?}", instr).as_str()); }
+            ProcessorState::Executing { instr } => { ret_str.push_str(format!("Cur instr:\n{}", instr).as_str()); }
         }
 
         ret_str

@@ -65,6 +65,10 @@ impl eframe::App for EmulatorApp {
             self.device.tick_clock(1).expect("Error thrown when executing system clock tick")
         }
 
+        if ctx.input(|i| i.key_pressed(egui::Key::R)) {
+            self.device.reset()
+        }
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
