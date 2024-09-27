@@ -1,4 +1,3 @@
-
 mod memory;
 mod regfile;
 
@@ -32,7 +31,6 @@ impl Default for Arm7TDMI {
 }
 
 impl Arm7TDMI {
-
     pub fn load_bios_rom(&mut self, bios_rom_bytes: &Vec<u8>) -> Result<(), &'static str> {
         self.memory.load_bios_rom(&bios_rom_bytes)
     }

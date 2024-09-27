@@ -1,4 +1,3 @@
-
 pub struct Memory {
     print_cursor: usize,
     bios_rom: [u8; 16384],
@@ -29,6 +28,21 @@ impl Memory {
         self.bios_rom[address]
     }
 
+    pub fn get_halfword(&self, address: usize) -> u16 {
+        // TODO: pull from different memory regions
+        let address = address & (!1usize); // Mask off lowest bit to ensure alignment
+        ((self.bios_rom[address + 1] as u16) << 8) | (self.bios_rom[address] as u16)
+    }
+
+    pub fn get_word(&self, address: usize) -> u32 {
+        // TODO: pull from different memory regions
+        let address = address & (!3usize); // Mask off lowest two bits to ensure alignment
+        ((self.bios_rom[address + 3] as u32) << 24)
+            | ((self.bios_rom[address + 2] as u32) << 16)
+            | ((self.bios_rom[address + 1] as u32) << 8)
+            | (self.bios_rom[address] as u32)
+    }
+
     pub fn advance_mem_cursor(&mut self) {
         self.print_cursor = self.print_cursor.saturating_add(8);
     }
@@ -44,19 +58,23 @@ impl Memory {
         ret_str.push_str("-----------|-------------------------|\n");
 
         for line_offset in 0..num_lines {
-            ret_str.push_str(format!("{:#010x} | {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} |\n",
-            line_offset*8 + self.print_cursor,
-            self.get_byte(line_offset*8 + self.print_cursor+7),
-            self.get_byte(line_offset*8 + self.print_cursor+6),
-            self.get_byte(line_offset*8 + self.print_cursor+5),
-            self.get_byte(line_offset*8 + self.print_cursor+4),
-            self.get_byte(line_offset*8 + self.print_cursor+3),
-            self.get_byte(line_offset*8 + self.print_cursor+2),
-            self.get_byte(line_offset*8 + self.print_cursor+1),
-            self.get_byte(line_offset*8 + self.print_cursor+0),
-            ).as_str());
+            ret_str.push_str(
+                format!(
+                    "{:#010x} | {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} |\n",
+                    line_offset * 8 + self.print_cursor,
+                    self.get_byte(line_offset * 8 + self.print_cursor + 7),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 6),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 5),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 4),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 3),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 2),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 1),
+                    self.get_byte(line_offset * 8 + self.print_cursor + 0),
+                )
+                .as_str(),
+            );
         }
-        
+
         ret_str.push_str("-----------|-------------------------|\n");
 
         ret_str

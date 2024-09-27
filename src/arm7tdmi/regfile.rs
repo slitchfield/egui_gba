@@ -1,5 +1,5 @@
-use crate::util;
 use crate::arm7tdmi::Status;
+use crate::util;
 
 #[derive(Default)]
 pub struct RegFile {
@@ -137,5 +137,4 @@ impl RegFile {
         );
         ret_str
     }
-
 }

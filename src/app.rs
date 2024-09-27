@@ -109,7 +109,9 @@ impl eframe::App for EmulatorApp {
                         handle
                             .read_to_end(&mut rom_buf)
                             .expect("Could not read from file");
-                        self.device.load_bios_rom(open_file, &rom_buf).map_err(|e| e.into()) // Convert R<_, &str> to R<_, String>
+                        self.device
+                            .load_bios_rom(open_file, &rom_buf)
+                            .map_err(|e| e.into()) // Convert R<_, &str> to R<_, String>
                     }
                 };
             }

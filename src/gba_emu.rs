@@ -36,7 +36,11 @@ impl Gbaemu {
         );
     }
 
-    pub fn load_bios_rom(&mut self, rompath: String, rombytes: &Vec<u8>) -> Result<(), &'static str> {
+    pub fn load_bios_rom(
+        &mut self,
+        rompath: String,
+        rombytes: &Vec<u8>,
+    ) -> Result<(), &'static str> {
         self.rompath = PathBuf::from(rompath.clone());
         self.biosrombytes = rombytes.clone();
         self.arm_core.load_bios_rom(&self.biosrombytes)
@@ -57,7 +61,7 @@ impl Gbaemu {
     pub fn advance_mem_cursor(&mut self) {
         self.arm_core.memory.advance_mem_cursor()
     }
-    
+
     pub fn regress_mem_cursor(&mut self) {
         self.arm_core.memory.regress_mem_cursor()
     }
