@@ -3,6 +3,7 @@ use crate::util;
 
 #[derive(Default)]
 pub struct RegFile {
+    mode: OpMode,
     r0: u32,
     r1: u32,
     r2: u32,
@@ -31,8 +32,8 @@ pub struct RegFile {
     spsr_fiq: u32,
     // Supervisor Op mode
     r13_svc: u32,
-    pub r14_svc: u32, // TODO: Revisit design to change directly setting regs
-    pub spsr_svc: u32,
+    r14_svc: u32, 
+    spsr_svc: u32,
     // Abord Op mode
     r13_abt: u32,
     r14_abt: u32,
@@ -48,50 +49,71 @@ pub struct RegFile {
 }
 
 impl RegFile {
-    pub fn get_register(&self, mode: &OpMode, idx: u8) -> Option<u32> {
+    pub fn get_register(&self, idx: u8) -> u32 {
         assert!(idx <= 15);
-        match mode {
-            OpMode::User => match idx {
-                0 => Some(self.r0),
-                1 => Some(self.r1),
-                2 => Some(self.r2),
-                3 => Some(self.r3),
-                4 => Some(self.r4),
-                5 => Some(self.r5),
-                6 => Some(self.r6),
-                7 => Some(self.r7),
-                8 => Some(self.r8),
-                9 => Some(self.r9),
-                10 => Some(self.r10),
-                11 => Some(self.r11),
-                12 => Some(self.r12),
-                13 => Some(self.r13),
-                14 => Some(self.r14),
-                15 => Some(self.r15_pc),
-
+        match idx {
+            0 => self.r0,
+            1 => self.r1,
+            2 => self.r2,
+            3 => self.r3,
+            4 => self.r4,
+            5 => self.r5,
+            6 => self.r6,
+            7 => self.r7,
+            8 => self.r8,
+            9 => self.r9,
+            10 => self.r10,
+            11 => self.r11,
+            12 => self.r12,
+            13 => match self.mode {
+                OpMode::User => self.r13,
+                OpMode::Supervisor => self.r13_svc,
                 _ => unimplemented!(),
             },
-            OpMode::Supervisor => match idx {
-                0 => Some(self.r0),
-                1 => Some(self.r1),
-                2 => Some(self.r2),
-                3 => Some(self.r3),
-                4 => Some(self.r4),
-                5 => Some(self.r5),
-                6 => Some(self.r6),
-                7 => Some(self.r7),
-                8 => Some(self.r8),
-                9 => Some(self.r9),
-                10 => Some(self.r10),
-                11 => Some(self.r11),
-                12 => Some(self.r12),
-                13 => Some(self.r13_svc),
-                14 => Some(self.r14_svc),
-                15 => Some(self.r15_pc),
-
-                _ => unimplemented!(),
-            },
+            14 => match self.mode {
+                OpMode::User => self.r14,
+                OpMode::Supervisor => self.r14_svc,
+                _ => unimplemented!()
+            }
+            15 => self.r15_pc,
             _ => unimplemented!(),
+        }
+    }
+
+    pub fn set_register(&mut self, idx: u8, value: u32) {
+        assert!(idx <= 17);
+        match idx {
+            0 => self.r0 = value,
+            1 => self.r1 = value,
+            2 => self.r2 = value,
+            3 => self.r3 = value,
+            4 => self.r4 = value,
+            5 => self.r5 = value,
+            6 => self.r6 = value,
+            7 => self.r7 = value,
+            8 => self.r8 = value,
+            9 => self.r9 = value,
+            10 => self.r10 = value,
+            11 => self.r11 = value,
+            12 => self.r12 = value,
+            13 => match self.mode {
+                OpMode::User => { self.r13 = value }
+                OpMode::Supervisor => { self.r13_svc = value }
+                _ => { unimplemented!() }
+            }
+            14 => match self.mode {
+                OpMode::User => { self.r14 = value }
+                OpMode::Supervisor => { self.r14_svc = value }
+                _ => { unimplemented!() }
+            }
+            15 => self.r15_pc = value,
+            16 => self.cpsr = value,
+            17 => match self.mode {
+                OpMode::User => unimplemented!(), // SPSR not valid for user mode
+                OpMode::Supervisor => { self.spsr_svc = value }
+                _ => unimplemented!(),
+            }
+            _ => unimplemented!()
         }
     }
 
@@ -110,8 +132,14 @@ impl RegFile {
 
     pub fn set_cpsr_mode(&mut self, mode: &OpMode) -> Result<(), &'static str> {
         match mode {
-            OpMode::User => self.set_cpsr_bits(0, 5, 0b10000),
-            OpMode::Supervisor => self.set_cpsr_bits(0, 5, 0b10011),
+            OpMode::User => {
+                self.mode = OpMode::User;
+                self.set_cpsr_bits(0, 5, 0b10000)
+            }
+            OpMode::Supervisor => {
+                self.mode = OpMode::Supervisor;
+                self.set_cpsr_bits(0, 5, 0b10011)
+            }
             _ => {
                 unimplemented!()
             }

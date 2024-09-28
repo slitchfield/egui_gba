@@ -90,9 +90,16 @@ impl InstrPayload {
         match self {
             Self::Undefined => Err("Tried to execute undefined instruction"),
             Self::Branch { offset } => {
-                // sign extend offset
+
+                let mut calculated_offset = *offset;
+                // sign extend offset (encoded in 24b)
+                if calculated_offset & 0x800000 > 0 {
+                    calculated_offset |= 0xff000000;
+                }
 
                 // r15 += offset * 4
+                let cur_pc = regfile.get_register(15);
+                regfile.set_register(15, cur_pc + (calculated_offset * 4) );
 
                 // Need to clear pipeline
 

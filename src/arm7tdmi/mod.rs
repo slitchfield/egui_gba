@@ -4,7 +4,7 @@ mod regfile;
 
 use instruction::Instruction;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum OpMode {
     User,
     _Fiq,
@@ -12,7 +12,8 @@ pub enum OpMode {
     _Abort,
     _Irq,
     _System,
-    _Undefined,
+    #[default]
+    Undefined,
 }
 /*
 #[derive(Debug, Default)]
@@ -89,14 +90,14 @@ impl Arm7TDMI {
         // When nRESET goes HIGH again, the ARM7TDMI processor:
         // 1. Overwrites R14_svc and SPSR_svc by copying the current values of the PC and
         // CPSR into them. The values of the PC and CPSR are indeterminate.
-        let cur_pc = self.regfile.get_register(&self.opmode, 15).unwrap();
+        let cur_pc = self.regfile.get_register(15);
         let cur_cpsr = self.get_cpsr();
-        self.regfile.r14_svc = cur_pc;
-        self.regfile.spsr_svc = cur_cpsr;
+        let _ = self.set_mode(OpMode::Supervisor);
+        self.regfile.set_register(14, cur_pc);
+        self.regfile.set_register(17, cur_cpsr);
 
         // 2. Forces M[4:0] to b10011, Supervisor mode, sets the I and F bits, and clears the
         // T-bit in the CPSR.
-        let _ = self.set_mode(OpMode::Supervisor);
         let _ = self.disable_fiq();
         let _ = self.disable_irq();
         let _ = self.enter_arm_mode();
@@ -122,8 +123,7 @@ impl Arm7TDMI {
             // Load initial pipeline contents
             let cur_pc = self
                 .regfile
-                .get_register(&self.opmode, 15)
-                .ok_or("Could not retrieve PC?")?;
+                .get_register(15);
 
             let raw_fetch_instr = self.memory.get_word((cur_pc + 8) as usize);
             self.fetch_instr = instruction::Instruction::from_bytes(raw_fetch_instr);
@@ -149,8 +149,7 @@ impl Arm7TDMI {
             self.decode_instr = self.fetch_instr;
             let cur_pc = self
                 .regfile
-                .get_register(&self.opmode, 15)
-                .ok_or("Could not retrieve PC?")?;
+                .get_register(15);
             let raw_instr = self.memory.get_word(cur_pc as usize);
             self.fetch_instr = instruction::Instruction::from_bytes(raw_instr);
         }
@@ -164,112 +163,112 @@ impl Arm7TDMI {
         ret_str.push_str(
             format!(
                 "R0:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 0u8).unwrap()
+                self.regfile.get_register(0u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R8:  {:08x}\n",
-                self.regfile.get_register(&self.opmode, 8u8).unwrap()
+                self.regfile.get_register(8u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R1:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 1u8).unwrap()
+                self.regfile.get_register(1u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R9:  {:08x}\n",
-                self.regfile.get_register(&self.opmode, 9u8).unwrap()
+                self.regfile.get_register(9u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R2:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 2u8).unwrap()
+                self.regfile.get_register(2u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R10: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 10u8).unwrap()
+                self.regfile.get_register(10u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R3:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 3u8).unwrap()
+                self.regfile.get_register(3u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R11: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 11u8).unwrap()
+                self.regfile.get_register(11u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R4:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 4u8).unwrap()
+                self.regfile.get_register(4u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R12: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 12u8).unwrap()
+                self.regfile.get_register(12u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R5:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 5u8).unwrap()
+                self.regfile.get_register(5u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R13: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 13u8).unwrap()
+                self.regfile.get_register(13u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R6:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 6u8).unwrap()
+                self.regfile.get_register(6u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R14: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 14u8).unwrap()
+                self.regfile.get_register(14u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R7:  {:08x}\t",
-                self.regfile.get_register(&self.opmode, 7u8).unwrap()
+                self.regfile.get_register(7u8)
             )
             .as_str(),
         );
         ret_str.push_str(
             format!(
                 "R15: {:08x}\n",
-                self.regfile.get_register(&self.opmode, 15u8).unwrap()
+                self.regfile.get_register(15u8)
             )
             .as_str(),
         );
