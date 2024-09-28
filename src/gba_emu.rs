@@ -50,6 +50,7 @@ impl Gbaemu {
 
     pub fn reset(&mut self) {
         println!("Resetting system...");
+        self.status_bar = "Resetting system".to_string();
         self.arm_core.reset()
     }
 
@@ -58,7 +59,12 @@ impl Gbaemu {
             unimplemented!()
         } // TODO: Add support for running multiple cycles at once
 
-        self.arm_core.tick_clock(num_ticks)
+        if self.biosrombytes.is_empty() {
+            self.status_bar = "Skipping clock ticks without bios".to_string();
+            Ok(())
+        } else {
+            self.arm_core.tick_clock(num_ticks)
+        }
     }
 
     pub fn get_status(&self) -> String {
