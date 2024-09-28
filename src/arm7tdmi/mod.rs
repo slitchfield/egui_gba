@@ -2,6 +2,8 @@ mod instruction;
 mod memory;
 mod regfile;
 
+use instruction::Instruction;
+
 #[derive(Debug)]
 pub enum OpMode {
     User,
@@ -12,7 +14,7 @@ pub enum OpMode {
     _System,
     _Undefined,
 }
-
+/*
 #[derive(Debug, Default)]
 pub enum ProcessorState {
     #[default]
@@ -25,6 +27,8 @@ pub enum ProcessorState {
 }
 
 use std::fmt;
+
+use instruction::Instruction;
 impl fmt::Display for ProcessorState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -40,13 +44,17 @@ impl fmt::Display for ProcessorState {
         }
     }
 }
-
+*/
 pub struct Arm7TDMI {
     pub clock_cycle: usize,
     pub opmode: OpMode,
     pub regfile: regfile::RegFile,
     pub memory: memory::Memory,
-    pub procstate: ProcessorState,
+    //pub procstate: ProcessorState,
+    pub is_idle: bool,
+    pub fetch_instr: Instruction,
+    pub decode_instr: Instruction,
+    pub exec_instr: Instruction,
 }
 
 impl Default for Arm7TDMI {
@@ -56,7 +64,11 @@ impl Default for Arm7TDMI {
             opmode: OpMode::User,
             regfile: regfile::RegFile::default(),
             memory: memory::Memory::default(),
-            procstate: ProcessorState::Idle,
+            //procstate: ProcessorState::Idle,
+            is_idle: false,
+            fetch_instr: Instruction::default(),
+            decode_instr: Instruction::default(),
+            exec_instr: Instruction::default(),
         };
         constructed_val.reset();
         constructed_val
@@ -97,7 +109,8 @@ impl Arm7TDMI {
 
         // Reset emulation specific structures
         self.clock_cycle = 0usize;
-        self.procstate = ProcessorState::Idle;
+        //self.procstate = ProcessorState::Idle;
+        self.is_idle = true;
     }
 
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
@@ -105,24 +118,41 @@ impl Arm7TDMI {
             unimplemented!()
         } // TODO: Add support for running multiple cycles at once
 
-        match self.procstate {
-            ProcessorState::Idle => {
-                // Fetch instruction and begin executing
-                let cur_pc = self
-                    .regfile
-                    .get_register(&self.opmode, 15)
-                    .ok_or("Could not retrieve PC?")?;
-                let raw_instr = self.memory.get_word(cur_pc as usize);
-                self.procstate = ProcessorState::Executing {
-                    fetch_instr: instruction::Instruction::from_bytes(raw_instr),
-                    decode_instr: instruction::Instruction::default(),
-                    exec_instr: instruction::Instruction::default(),
-                };
-            }
-            ProcessorState::Executing { .. } => {}
-            _ => {
-                unimplemented!()
-            }
+        if self.is_idle {
+            // Load initial pipeline contents
+            let cur_pc = self
+                .regfile
+                .get_register(&self.opmode, 15)
+                .ok_or("Could not retrieve PC?")?;
+
+            let raw_fetch_instr = self.memory.get_word((cur_pc + 8) as usize);
+            self.fetch_instr = instruction::Instruction::from_bytes(raw_fetch_instr);
+
+            let raw_decode_instr = self.memory.get_word((cur_pc + 4) as usize);
+            self.decode_instr = instruction::Instruction::from_bytes(raw_decode_instr);
+
+            let raw_exec_instr = self.memory.get_word(cur_pc as usize);
+            self.exec_instr = instruction::Instruction::from_bytes(raw_exec_instr);
+
+            self.is_idle = false;
+        }
+
+        // Execute Exec instr
+        let control_flow_change = self
+            .exec_instr
+            .execute(&mut self.regfile, &mut self.memory)?;
+
+        if control_flow_change {
+            // Flush and reload pipeline
+        } else {
+            self.exec_instr = self.decode_instr;
+            self.decode_instr = self.fetch_instr;
+            let cur_pc = self
+                .regfile
+                .get_register(&self.opmode, 15)
+                .ok_or("Could not retrieve PC?")?;
+            let raw_instr = self.memory.get_word(cur_pc as usize);
+            self.fetch_instr = instruction::Instruction::from_bytes(raw_instr);
         }
 
         self.clock_cycle += 1usize;
@@ -255,14 +285,23 @@ impl Arm7TDMI {
     pub fn print_exec_state(&self) -> String {
         let mut ret_str = String::new();
 
-        ret_str.push_str(format!("Current Exec State: {}\n", self.procstate).as_str());
+        ret_str.push_str(
+            format!(
+                "Current Exec State: {}\n",
+                if self.is_idle { "IDLE" } else { "EXEC" }
+            )
+            .as_str(),
+        );
         ret_str.push_str(format!("Clock Cycle: {}\n", self.clock_cycle).as_str());
 
-        match &self.procstate {
-            ProcessorState::Idle => {}
-            ProcessorState::Executing { fetch_instr, decode_instr, exec_instr } => {
-                ret_str.push_str(format!("Cur instrs:\nFET: {}\nDEC: {}\nEXE: {}\n", fetch_instr, decode_instr, exec_instr).as_str());
-            }
+        if !self.is_idle {
+            ret_str.push_str(
+                format!(
+                    "Cur instrs:\nFET: {}\nDEC: {}\nEXE: {}\n",
+                    self.fetch_instr, self.decode_instr, self.exec_instr
+                )
+                .as_str(),
+            );
         }
 
         ret_str

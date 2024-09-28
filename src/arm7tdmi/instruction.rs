@@ -1,4 +1,8 @@
-#[derive(Debug)]
+use super::{memory::Memory, regfile::RegFile};
+use std::fmt;
+
+// TODO: Evaluate necessity of Copy
+#[derive(Debug, Clone, Copy)]
 pub struct Instruction {
     raw_bytes: u32,
     cond: u8,
@@ -15,7 +19,6 @@ impl Default for Instruction {
     }
 }
 
-use std::fmt;
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Instruction:\n\traw: {:#04x}\n", self.raw_bytes)?;
@@ -60,9 +63,17 @@ impl Instruction {
             inner_instr,
         }
     }
+
+    pub fn execute(
+        &self,
+        regfile: &mut RegFile,
+        memory: &mut Memory,
+    ) -> Result<bool, &'static str> {
+        self.inner_instr.execute(regfile, memory)
+    }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 enum InstrPayload {
     #[default]
     Undefined,
@@ -72,6 +83,27 @@ enum InstrPayload {
     BranchAndLink {
         offset: u32,
     },
+}
+
+impl InstrPayload {
+    fn execute(&self, regfile: &mut RegFile, memory: &mut Memory) -> Result<bool, &'static str> {
+        match self {
+            Self::Undefined => Err("Tried to execute undefined instruction"),
+            Self::Branch { offset } => {
+                // sign extend offset
+
+                // r15 += offset * 4
+
+                // Need to clear pipeline
+
+                //unimplemented!();
+                Ok(true)
+            }
+            Self::BranchAndLink { offset } => {
+                unimplemented!()
+            }
+        }
+    }
 }
 
 impl fmt::Display for InstrPayload {
