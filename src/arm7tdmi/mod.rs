@@ -53,7 +53,7 @@ pub struct Arm7TDMI {
     pub memory: memory::Memory,
     //pub procstate: ProcessorState,
     pub is_idle: bool,
-    pub fetch_instr: Instruction,
+    pub fetch_instr: u32,
     pub decode_instr: Instruction,
     pub exec_instr: Instruction,
 }
@@ -67,7 +67,7 @@ impl Default for Arm7TDMI {
             memory: memory::Memory::default(),
             //procstate: ProcessorState::Idle,
             is_idle: false,
-            fetch_instr: Instruction::default(),
+            fetch_instr: 0xf0000000u32, // Default to UNPREDICTABLE
             decode_instr: Instruction::default(),
             exec_instr: Instruction::default(),
         };
@@ -114,6 +114,18 @@ impl Arm7TDMI {
         self.is_idle = true;
     }
 
+    fn reload_pipeline(&mut self) {
+        let cur_pc = self.regfile.get_register(15);
+
+        self.fetch_instr = self.memory.get_word((cur_pc.saturating_add(8)) as usize);
+
+        let raw_decode_instr = self.memory.get_word((cur_pc.saturating_add(4)) as usize);
+        self.decode_instr = instruction::Instruction::from_bytes(raw_decode_instr);
+
+        let raw_exec_instr = self.memory.get_word(cur_pc as usize);
+        self.exec_instr = instruction::Instruction::from_bytes(raw_exec_instr);
+    }
+
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
         if num_ticks > 1 {
             unimplemented!()
@@ -121,20 +133,9 @@ impl Arm7TDMI {
 
         if self.is_idle {
             // Load initial pipeline contents
-            let cur_pc = self
-                .regfile
-                .get_register(15);
-
-            let raw_fetch_instr = self.memory.get_word((cur_pc + 8) as usize);
-            self.fetch_instr = instruction::Instruction::from_bytes(raw_fetch_instr);
-
-            let raw_decode_instr = self.memory.get_word((cur_pc + 4) as usize);
-            self.decode_instr = instruction::Instruction::from_bytes(raw_decode_instr);
-
-            let raw_exec_instr = self.memory.get_word(cur_pc as usize);
-            self.exec_instr = instruction::Instruction::from_bytes(raw_exec_instr);
-
+            self.reload_pipeline();
             self.is_idle = false;
+            return Ok(()); // Show loaded pipeline before executing first instruction
         }
 
         // Execute Exec instr
@@ -144,134 +145,37 @@ impl Arm7TDMI {
 
         if control_flow_change {
             // Flush and reload pipeline
+            self.reload_pipeline();
         } else {
             self.exec_instr = self.decode_instr;
-            self.decode_instr = self.fetch_instr;
-            let cur_pc = self
-                .regfile
-                .get_register(15);
-            let raw_instr = self.memory.get_word(cur_pc as usize);
-            self.fetch_instr = instruction::Instruction::from_bytes(raw_instr);
+            self.decode_instr = Instruction::from_bytes(self.fetch_instr);
+            let cur_pc = self.regfile.get_register(15);
+            self.fetch_instr = self.memory.get_word(cur_pc as usize);
         }
 
         self.clock_cycle += 1usize;
         Ok(())
     }
+
     pub fn print_state(&self) -> String {
         let mut ret_str: String = String::new();
         ret_str.push_str(format!("Current State: {:?}\n", &self.opmode).as_str());
-        ret_str.push_str(
-            format!(
-                "R0:  {:08x}\t",
-                self.regfile.get_register(0u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R8:  {:08x}\n",
-                self.regfile.get_register(8u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R1:  {:08x}\t",
-                self.regfile.get_register(1u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R9:  {:08x}\n",
-                self.regfile.get_register(9u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R2:  {:08x}\t",
-                self.regfile.get_register(2u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R10: {:08x}\n",
-                self.regfile.get_register(10u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R3:  {:08x}\t",
-                self.regfile.get_register(3u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R11: {:08x}\n",
-                self.regfile.get_register(11u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R4:  {:08x}\t",
-                self.regfile.get_register(4u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R12: {:08x}\n",
-                self.regfile.get_register(12u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R5:  {:08x}\t",
-                self.regfile.get_register(5u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R13: {:08x}\n",
-                self.regfile.get_register(13u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R6:  {:08x}\t",
-                self.regfile.get_register(6u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R14: {:08x}\n",
-                self.regfile.get_register(14u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R7:  {:08x}\t",
-                self.regfile.get_register(7u8)
-            )
-            .as_str(),
-        );
-        ret_str.push_str(
-            format!(
-                "R15: {:08x}\n",
-                self.regfile.get_register(15u8)
-            )
-            .as_str(),
-        );
+        ret_str.push_str(format!("R0:  {:08x}\t", self.regfile.get_register(0u8)).as_str());
+        ret_str.push_str(format!("R8:  {:08x}\n", self.regfile.get_register(8u8)).as_str());
+        ret_str.push_str(format!("R1:  {:08x}\t", self.regfile.get_register(1u8)).as_str());
+        ret_str.push_str(format!("R9:  {:08x}\n", self.regfile.get_register(9u8)).as_str());
+        ret_str.push_str(format!("R2:  {:08x}\t", self.regfile.get_register(2u8)).as_str());
+        ret_str.push_str(format!("R10: {:08x}\n", self.regfile.get_register(10u8)).as_str());
+        ret_str.push_str(format!("R3:  {:08x}\t", self.regfile.get_register(3u8)).as_str());
+        ret_str.push_str(format!("R11: {:08x}\n", self.regfile.get_register(11u8)).as_str());
+        ret_str.push_str(format!("R4:  {:08x}\t", self.regfile.get_register(4u8)).as_str());
+        ret_str.push_str(format!("R12: {:08x}\n", self.regfile.get_register(12u8)).as_str());
+        ret_str.push_str(format!("R5:  {:08x}\t", self.regfile.get_register(5u8)).as_str());
+        ret_str.push_str(format!("R13: {:08x}\n", self.regfile.get_register(13u8)).as_str());
+        ret_str.push_str(format!("R6:  {:08x}\t", self.regfile.get_register(6u8)).as_str());
+        ret_str.push_str(format!("R14: {:08x}\n", self.regfile.get_register(14u8)).as_str());
+        ret_str.push_str(format!("R7:  {:08x}\t", self.regfile.get_register(7u8)).as_str());
+        ret_str.push_str(format!("R15: {:08x}\n", self.regfile.get_register(15u8)).as_str());
         ret_str.push_str("\n");
         ret_str.push_str(self.regfile.print_cpsr_state().as_str());
         ret_str.push_str("\n\n");

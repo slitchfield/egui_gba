@@ -32,7 +32,7 @@ pub struct RegFile {
     spsr_fiq: u32,
     // Supervisor Op mode
     r13_svc: u32,
-    r14_svc: u32, 
+    r14_svc: u32,
     spsr_svc: u32,
     // Abord Op mode
     r13_abt: u32,
@@ -73,8 +73,8 @@ impl RegFile {
             14 => match self.mode {
                 OpMode::User => self.r14,
                 OpMode::Supervisor => self.r14_svc,
-                _ => unimplemented!()
-            }
+                _ => unimplemented!(),
+            },
             15 => self.r15_pc,
             _ => unimplemented!(),
         }
@@ -97,23 +97,27 @@ impl RegFile {
             11 => self.r11 = value,
             12 => self.r12 = value,
             13 => match self.mode {
-                OpMode::User => { self.r13 = value }
-                OpMode::Supervisor => { self.r13_svc = value }
-                _ => { unimplemented!() }
-            }
+                OpMode::User => self.r13 = value,
+                OpMode::Supervisor => self.r13_svc = value,
+                _ => {
+                    unimplemented!()
+                }
+            },
             14 => match self.mode {
-                OpMode::User => { self.r14 = value }
-                OpMode::Supervisor => { self.r14_svc = value }
-                _ => { unimplemented!() }
-            }
+                OpMode::User => self.r14 = value,
+                OpMode::Supervisor => self.r14_svc = value,
+                _ => {
+                    unimplemented!()
+                }
+            },
             15 => self.r15_pc = value,
             16 => self.cpsr = value,
             17 => match self.mode {
                 OpMode::User => unimplemented!(), // SPSR not valid for user mode
-                OpMode::Supervisor => { self.spsr_svc = value }
+                OpMode::Supervisor => self.spsr_svc = value,
                 _ => unimplemented!(),
-            }
-            _ => unimplemented!()
+            },
+            _ => unimplemented!(),
         }
     }
 
