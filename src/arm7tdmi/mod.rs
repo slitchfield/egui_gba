@@ -15,44 +15,14 @@ pub enum OpMode {
     #[default]
     Undefined,
 }
-/*
-#[derive(Debug, Default)]
-pub enum ProcessorState {
-    #[default]
-    Idle,
-    Executing {
-        fetch_instr: instruction::Instruction,
-        decode_instr: instruction::Instruction,
-        exec_instr: instruction::Instruction,
-    },
-}
 
-use std::fmt;
-
-use instruction::Instruction;
-impl fmt::Display for ProcessorState {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Idle => {
-                write!(f, "Idle")
-            }
-            Self::Executing { .. } => {
-                write!(f, "Executing")
-            }
-            _ => {
-                unimplemented!()
-            }
-        }
-    }
-}
-*/
 pub struct Arm7TDMI {
     pub clock_cycle: usize,
     pub opmode: OpMode,
     pub regfile: regfile::RegFile,
     pub memory: memory::Memory,
-    //pub procstate: ProcessorState,
     pub is_idle: bool,
+    pub fetch_addr: u32,
     pub fetch_instr: u32,
     pub decode_instr: Instruction,
     pub exec_instr: Instruction,
@@ -65,8 +35,8 @@ impl Default for Arm7TDMI {
             opmode: OpMode::User,
             regfile: regfile::RegFile::default(),
             memory: memory::Memory::default(),
-            //procstate: ProcessorState::Idle,
             is_idle: false,
+            fetch_addr: 0u32,
             fetch_instr: 0xf0000000u32, // Default to UNPREDICTABLE
             decode_instr: Instruction::default(),
             exec_instr: Instruction::default(),
@@ -118,12 +88,14 @@ impl Arm7TDMI {
         let cur_pc = self.regfile.get_register(15);
 
         self.fetch_instr = self.memory.get_word((cur_pc.saturating_add(8)) as usize);
+        self.fetch_addr = cur_pc.saturating_add(8);
 
         let raw_decode_instr = self.memory.get_word((cur_pc.saturating_add(4)) as usize);
-        self.decode_instr = instruction::Instruction::from_bytes(raw_decode_instr);
+        self.decode_instr =
+            instruction::Instruction::from_bytes(cur_pc.saturating_add(4), raw_decode_instr);
 
         let raw_exec_instr = self.memory.get_word(cur_pc as usize);
-        self.exec_instr = instruction::Instruction::from_bytes(raw_exec_instr);
+        self.exec_instr = instruction::Instruction::from_bytes(cur_pc, raw_exec_instr);
     }
 
     pub fn tick_clock(&mut self, num_ticks: usize) -> Result<(), &'static str> {
@@ -148,8 +120,9 @@ impl Arm7TDMI {
             self.reload_pipeline();
         } else {
             self.exec_instr = self.decode_instr;
-            self.decode_instr = Instruction::from_bytes(self.fetch_instr);
+            self.decode_instr = Instruction::from_bytes(self.fetch_addr, self.fetch_instr);
             let cur_pc = self.regfile.get_register(15);
+            self.fetch_addr = cur_pc;
             self.fetch_instr = self.memory.get_word(cur_pc as usize);
         }
 
@@ -200,8 +173,8 @@ impl Arm7TDMI {
         if !self.is_idle {
             ret_str.push_str(
                 format!(
-                    "Cur instrs:\nFET: {}\nDEC: {}\nEXE: {}\n",
-                    self.fetch_instr, self.decode_instr, self.exec_instr
+                    "Cur instrs:\nFET:  {:#010x} @ {:#010x}\nDEC: {}\nEXE: {}\n",
+                    self.fetch_instr, self.fetch_addr, self.decode_instr, self.exec_instr
                 )
                 .as_str(),
             );

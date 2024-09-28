@@ -4,6 +4,7 @@ use std::fmt;
 // TODO: Evaluate necessity of Copy
 #[derive(Debug, Clone, Copy)]
 pub struct Instruction {
+    src_addr: u32,
     raw_bytes: u32,
     cond: u8,
     inner_instr: InstrPayload,
@@ -12,6 +13,7 @@ pub struct Instruction {
 impl Default for Instruction {
     fn default() -> Self {
         Self {
+            src_addr: 0u32,
             raw_bytes: 0u32,
             cond: 0u8,
             inner_instr: InstrPayload::Undefined,
@@ -21,13 +23,17 @@ impl Default for Instruction {
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Instruction:\n\traw: {:#04x}\n", self.raw_bytes)?;
+        write!(
+            f,
+            "Instruction @ {:#010x}:\n\traw: {:#08x}\n",
+            self.src_addr, self.raw_bytes
+        )?;
         write!(f, "\t{}", self.inner_instr)
     }
 }
 
 impl Instruction {
-    pub fn from_bytes(raw_bytes: u32) -> Self {
+    pub fn from_bytes(fetch_addr: u32, raw_bytes: u32) -> Self {
         let cond: u8 = ((raw_bytes & 0xF0000000u32) >> 28) as u8;
         if cond == 0xfu8 {
             unimplemented!()
@@ -55,13 +61,21 @@ impl Instruction {
                     let rotate: u8 = ((raw_bytes & 0x00000f00) >> 8) as u8;
                     // 100000000 >> 7
                     let immed: u8 = (raw_bytes & 0x000000ff) as u8;
-                    InstrPayload::DataProcImmed {
-                        opcode,
-                        s,
-                        rn,
-                        rd,
-                        rotate,
-                        immed,
+                    match opcode {
+                        0b0010 =>
+                        // SUBI
+                        {
+                            InstrPayload::SubI {
+                                s,
+                                rn,
+                                rd,
+                                rotate,
+                                immed,
+                            }
+                        }
+                        _ => {
+                            unimplemented!()
+                        }
                     }
                 }
             }
@@ -103,6 +117,7 @@ impl Instruction {
         };
 
         Self {
+            src_addr: fetch_addr,
             cond,
             raw_bytes,
             inner_instr,
@@ -128,14 +143,6 @@ enum InstrPayload {
     BranchAndLink {
         offset: u32,
     },
-    DataProcImmed {
-        opcode: u8,
-        s: bool,
-        rn: u8,
-        rd: u8,
-        rotate: u8,
-        immed: u8,
-    },
     LSMultiple {
         p: bool,
         u: bool,
@@ -144,6 +151,13 @@ enum InstrPayload {
         l: bool,
         rn: u8,
         reglist: u16,
+    },
+    SubI {
+        s: bool,
+        rn: u8,
+        rd: u8,
+        rotate: u8,
+        immed: u8,
     },
 }
 
@@ -180,10 +194,44 @@ impl fmt::Display for InstrPayload {
                 write!(f, "UNDEFINED")
             }
             Self::Branch { offset } => {
-                write!(f, "Branch (offset = {:#08x})", offset)
+                write!(
+                    f,
+                    "Branch (offset = {:#08x}) PC <= PC + {}",
+                    offset,
+                    4 * (*offset as i32)
+                )
             }
             Self::BranchAndLink { offset } => {
                 write!(f, "Branch And Link (offset = {:#08x})", offset)
+            }
+            Self::LSMultiple {
+                p,
+                u,
+                s,
+                w,
+                l,
+                rn,
+                reglist,
+            } => {
+                //todo: Update printed output
+                write!(
+                    f,
+                    "LSMU (p:{}) (u:{}) (s:{}) (w:{}) (l:{}) -> Store {} at Mem(R{}) TODO",
+                    p, u, s, w, l, reglist, rn
+                )
+            }
+            Self::SubI {
+                s,
+                rn,
+                rd,
+                rotate,
+                immed,
+            } => {
+                write!(
+                    f,
+                    "SUBI (s:{}) -> R{} = R{} - ({} >> {}*2)",
+                    s, rn, rd, immed, rotate
+                )
             }
             _ => {
                 println!("Tried to print instruction enum {:?}", self);
