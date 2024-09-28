@@ -6,20 +6,11 @@ use std::io::prelude::*;
 use crate::gba_emu::Gbaemu;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Default, serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct EmulatorApp {
     #[serde(skip)]
     device: Gbaemu,
-}
-
-impl Default for EmulatorApp {
-    fn default() -> Self {
-        Self {
-            // Example stuff:
-            device: Gbaemu::default(),
-        }
-    }
 }
 
 impl EmulatorApp {
@@ -94,7 +85,7 @@ impl eframe::App for EmulatorApp {
         egui::SidePanel::left("processor_state")
             .show_separator_line(true)
             .resizable(false)
-            .default_width(STATE_WIDTH as f32)
+            .default_width(STATE_WIDTH)
             .show(ctx, |ui| {
                 ui.heading("Processor State:");
                 ui.add(

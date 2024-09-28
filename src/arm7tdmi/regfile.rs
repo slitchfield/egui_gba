@@ -1,6 +1,7 @@
 use crate::arm7tdmi::OpMode;
 use crate::util;
 
+#[allow(dead_code)] // Unused reg reads
 #[derive(Default)]
 pub struct RegFile {
     mode: OpMode,

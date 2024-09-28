@@ -48,7 +48,7 @@ impl Default for Arm7TDMI {
 
 impl Arm7TDMI {
     pub fn load_bios_rom(&mut self, bios_rom_bytes: &Vec<u8>) -> Result<(), &'static str> {
-        self.memory.load_bios_rom(&bios_rom_bytes)
+        self.memory.load_bios_rom(bios_rom_bytes)
     }
 
     pub fn reset(&mut self) {
@@ -149,13 +149,13 @@ impl Arm7TDMI {
         ret_str.push_str(format!("R14: {:08x}\n", self.regfile.get_register(14u8)).as_str());
         ret_str.push_str(format!("R7:  {:08x}\t", self.regfile.get_register(7u8)).as_str());
         ret_str.push_str(format!("R15: {:08x}\n", self.regfile.get_register(15u8)).as_str());
-        ret_str.push_str("\n");
+        ret_str.push('\n');
         ret_str.push_str(self.regfile.print_cpsr_state().as_str());
         ret_str.push_str("\n\n");
 
         ret_str.push_str(self.memory.print_memory(64).as_str());
 
-        return ret_str;
+        ret_str
     }
 
     pub fn print_exec_state(&self) -> String {
@@ -183,7 +183,7 @@ impl Arm7TDMI {
         ret_str
     }
     pub fn get_cpsr(&self) -> u32 {
-        return self.regfile.get_cpsr();
+        self.regfile.get_cpsr()
     }
 
     pub fn set_mode(&mut self, opmode: OpMode) -> Result<(), &'static str> {

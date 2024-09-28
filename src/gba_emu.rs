@@ -26,9 +26,9 @@ impl Default for Gbaemu {
 }
 
 impl Gbaemu {
-    pub fn load_rom(&mut self, rompath: String, rombytes: &Vec<u8>) -> () {
+    pub fn load_rom(&mut self, rompath: String, rombytes: &[u8]) {
         self.rompath = PathBuf::from(rompath.clone());
-        self.rombytes = rombytes.clone();
+        self.rombytes = rombytes.to_owned();
         self.status_bar = format!(
             "{:04x} | Loading file: \"{}\"",
             self.arm_core.get_cpsr(),
@@ -39,10 +39,10 @@ impl Gbaemu {
     pub fn load_bios_rom(
         &mut self,
         rompath: String,
-        rombytes: &Vec<u8>,
+        rombytes: &[u8],
     ) -> Result<(), &'static str> {
         self.rompath = PathBuf::from(rompath.clone());
-        self.biosrombytes = rombytes.clone();
+        self.biosrombytes = rombytes.to_owned();
         self.arm_core.load_bios_rom(&self.biosrombytes)
     }
 
@@ -57,10 +57,6 @@ impl Gbaemu {
         } // TODO: Add support for running multiple cycles at once
 
         self.arm_core.tick_clock(num_ticks)
-    }
-
-    pub fn get_rom_bytes(&self) -> &Vec<u8> {
-        &self.rombytes
     }
 
     pub fn get_status(&self) -> String {

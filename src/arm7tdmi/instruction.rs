@@ -2,6 +2,7 @@ use super::{memory::Memory, regfile::RegFile};
 use std::fmt;
 
 // TODO: Evaluate necessity of Copy
+#[allow(dead_code)] // Read of cond
 #[derive(Debug, Clone, Copy)]
 pub struct Instruction {
     src_addr: u32,
@@ -54,12 +55,11 @@ impl Instruction {
                     unimplemented!();
                 } else {
                     // data processing immed
-                    let opcode = ((raw_bytes & 0x01e00000) >> 21) as u8;
+                    let opcode: u8 = ((raw_bytes & 0x01e00000) >> 21) as u8;
                     let s: bool = ((raw_bytes & 0x00100000) >> 20) != 0;
                     let rn: u8 = ((raw_bytes & 0x000f0000) >> 16) as u8;
                     let rd: u8 = ((raw_bytes & 0x0000f000) >> 12) as u8;
                     let rotate: u8 = ((raw_bytes & 0x00000f00) >> 8) as u8;
-                    // 100000000 >> 7
                     let immed: u8 = (raw_bytes & 0x000000ff) as u8;
                     match opcode {
                         0b0010 =>
@@ -162,7 +162,7 @@ enum InstrPayload {
 }
 
 impl InstrPayload {
-    fn execute(&self, regfile: &mut RegFile, memory: &mut Memory) -> Result<bool, &'static str> {
+    fn execute(&self, regfile: &mut RegFile, _memory: &mut Memory) -> Result<bool, &'static str> {
         match self {
             Self::Undefined => Err("Tried to execute undefined instruction"),
             Self::Branch { offset } => {
@@ -179,7 +179,7 @@ impl InstrPayload {
                 // Need to clear pipeline, so return true
                 Ok(true)
             }
-            Self::BranchAndLink { offset } => {
+            Self::BranchAndLink { offset: _ } => {
                 unimplemented!()
             }
             _ => unimplemented!(),
@@ -187,7 +187,9 @@ impl InstrPayload {
     }
 }
 
+#[allow(unreachable_patterns)] // Allow _ catch all for future proofing
 impl fmt::Display for InstrPayload {
+    #[allow(clippy::print_in_format_impl)] // Println! lives in panic case
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Undefined => {

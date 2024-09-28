@@ -27,7 +27,7 @@ impl Memory {
 
     pub fn get_byte(&self, address: usize) -> u8 {
         // TODO: pull from different memory regions based on address?
-        const BIOS_END: usize = 1usize << 12 - 1;
+        const BIOS_END: usize = (1usize << 12) - 1;
         match address {
             0..=BIOS_END => self.bios_rom[address],
             _ => {
@@ -36,7 +36,7 @@ impl Memory {
         }
     }
 
-    pub fn get_halfword(&self, address: usize) -> u16 {
+    pub fn _get_halfword(&self, address: usize) -> u16 {
         // TODO: pull from different memory regions
         let address = address & (!1usize); // Mask off lowest bit to ensure alignment
         get_halfword(&self.bios_rom, address)
@@ -74,7 +74,7 @@ impl Memory {
                     self.get_byte(line_offset * 8 + self.print_cursor + 3),
                     self.get_byte(line_offset * 8 + self.print_cursor + 2),
                     self.get_byte(line_offset * 8 + self.print_cursor + 1),
-                    self.get_byte(line_offset * 8 + self.print_cursor + 0),
+                    self.get_byte(line_offset * 8 + self.print_cursor),
                 )
                 .as_str(),
             );
