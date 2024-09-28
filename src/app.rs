@@ -1,16 +1,33 @@
 use egui::Color32;
 use egui::RichText;
-use std::fs::File;
-use std::io::prelude::*;
+
+use std::future::Future;
+use std::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::gba_emu::Gbaemu;
 
+type PathBytesChannel = (Sender<(String, Vec<u8>)>, Receiver<(String, Vec<u8>)>);
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct EmulatorApp {
     #[serde(skip)]
     device: Gbaemu,
+    #[serde(skip)]
+    bios_channel: PathBytesChannel,
+    #[serde(skip)]
+    rom_channel: PathBytesChannel,
+}
+
+impl Default for EmulatorApp {
+    fn default() -> Self {
+        Self {
+            device: Gbaemu::default(),
+            bios_channel: channel(),
+            rom_channel: channel(),
+        }
+    }
 }
 
 impl EmulatorApp {
@@ -102,45 +119,46 @@ impl eframe::App for EmulatorApp {
                 ui.label("Controls");
             });
 
+            if let Ok((path, bytes)) = self.bios_channel.1.try_recv() {
+                self.device
+                    .load_bios_rom(path, &bytes)
+                    .expect("Could not load bios");
+            }
+
             if ui.button("Load BIOS File").clicked() {
-                let open_file: String;
-                let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
-                    None => {
-                        //open_file = "null".to_string();
-                        Err("No file provided".to_string())
+                let sender = self.bios_channel.0.clone();
+                let task = rfd::AsyncFileDialog::new().pick_file();
+                let ctx = ui.ctx().clone();
+                execute(async move {
+                    let file = task.await;
+                    if let Some(file) = file {
+                        let path = file.file_name();
+                        let bytes = file.read().await;
+                        let _ = sender.send((path, bytes));
+                        ctx.request_repaint();
                     }
-                    Some(file) => {
-                        open_file = file.clone();
-                        let mut handle = File::open(file).expect("Could not open file");
-                        let mut rom_buf: Vec<u8> = vec![];
-                        handle
-                            .read_to_end(&mut rom_buf)
-                            .expect("Could not read from file");
-                        self.device
-                            .load_bios_rom(open_file, &rom_buf)
-                            .map_err(|e| e.into()) // Convert R<_, &str> to R<_, String>
-                    }
-                };
+                })
+            }
+
+            if let Ok((path, bytes)) = self.rom_channel.1.try_recv() {
+                self.device
+                    .load_rom(path, &bytes)
+                    .expect("Could not load rom");
             }
 
             if ui.button("Open ROM File").clicked() {
-                let open_file: String;
-                let _ = match tinyfiledialogs::open_file_dialog("Open", "", None) {
-                    None => {
-                        //open_file = "null".to_string();
-                        Err("No file provided".to_string())
+                let sender = self.rom_channel.0.clone();
+                let task = rfd::AsyncFileDialog::new().pick_file();
+                let ctx = ui.ctx().clone();
+                execute(async move {
+                    let file = task.await;
+                    if let Some(file) = file {
+                        let path = file.file_name();
+                        let bytes = file.read().await;
+                        let _ = sender.send((path, bytes));
+                        ctx.request_repaint();
                     }
-                    Some(file) => {
-                        open_file = file.clone();
-                        let mut handle = File::open(file).expect("Could not open file");
-                        let mut rom_buf: Vec<u8> = vec![];
-                        handle
-                            .read_to_end(&mut rom_buf)
-                            .expect("Could not read from file");
-                        self.device.load_rom(open_file, &rom_buf);
-                        Ok(())
-                    }
-                };
+                })
             }
 
             ui.separator();
@@ -157,4 +175,14 @@ impl eframe::App for EmulatorApp {
             });
         });
     }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
+    std::thread::spawn(move || futures::executor::block_on(f));
+}
+
+#[cfg(target_arch = "wasm32")]
+fn execute<F: Future<Output = ()> + 'static>(f: F) {
+    wasm_bindgen_futures::spawn_local(f);
 }

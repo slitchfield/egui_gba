@@ -26,23 +26,25 @@ impl Default for Gbaemu {
 }
 
 impl Gbaemu {
-    pub fn load_rom(&mut self, rompath: String, rombytes: &[u8]) {
+    pub fn load_rom(&mut self, rompath: String, rombytes: &[u8]) -> Result<(), &'static str> {
         self.rompath = PathBuf::from(rompath.clone());
         self.rombytes = rombytes.to_owned();
         self.status_bar = format!(
-            "{:04x} | Loading file: \"{}\"",
+            "{:04x} | Loading rom file: \"{}\"",
             self.arm_core.get_cpsr(),
             rompath
         );
+        Ok(())
     }
 
-    pub fn load_bios_rom(
-        &mut self,
-        rompath: String,
-        rombytes: &[u8],
-    ) -> Result<(), &'static str> {
+    pub fn load_bios_rom(&mut self, rompath: String, rombytes: &[u8]) -> Result<(), &'static str> {
         self.rompath = PathBuf::from(rompath.clone());
         self.biosrombytes = rombytes.to_owned();
+        self.status_bar = format!(
+            "{:04x} | Loading bios file: \"{}\"",
+            self.arm_core.get_cpsr(),
+            rompath
+        );
         self.arm_core.load_bios_rom(&self.biosrombytes)
     }
 
