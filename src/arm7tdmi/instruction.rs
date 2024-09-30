@@ -88,14 +88,26 @@ impl Instruction {
                 let l: bool = (raw_bytes & 0x00100000) != 0;
                 let rn: u8 = ((raw_bytes & 0x000f0000) >> 16) as u8;
                 let reglist: u16 = (raw_bytes & 0x0000ffff) as u16;
-                InstrPayload::LSMultiple {
-                    p,
-                    u,
-                    s,
-                    w,
-                    l,
-                    rn,
-                    reglist,
+                if l {
+                    // Load instructions
+                    InstrPayload::LoadMultiple {
+                        p,
+                        u,
+                        s,
+                        w,
+                        rn,
+                        reglist
+                    }
+                } else {
+                    // Store instructions
+                    InstrPayload::StoreMultiple {
+                        p,
+                        u,
+                        s,
+                        w,
+                        rn,
+                        reglist,
+                    }
                 }
             }
             0b101 => {
@@ -143,12 +155,19 @@ enum InstrPayload {
     BranchAndLink {
         offset: u32,
     },
-    LSMultiple {
+    LoadMultiple {
         p: bool,
         u: bool,
         s: bool,
         w: bool,
-        l: bool,
+        rn: u8,
+        reglist: u16,
+    },
+    StoreMultiple {
+        p: bool,
+        u: bool,
+        s: bool,
+        w: bool,
         rn: u8,
         reglist: u16,
     },
@@ -162,7 +181,7 @@ enum InstrPayload {
 }
 
 impl InstrPayload {
-    fn execute(&self, regfile: &mut RegFile, _memory: &mut Memory) -> Result<bool, &'static str> {
+    fn execute(&self, regfile: &mut RegFile, memory: &mut Memory) -> Result<bool, &'static str> {
         match self {
             Self::Undefined => Err("Tried to execute undefined instruction"),
             Self::Branch { offset } => {
@@ -180,6 +199,35 @@ impl InstrPayload {
                 Ok(true)
             }
             Self::BranchAndLink { offset: _ } => {
+                unimplemented!()
+            }
+            Self::LoadMultiple { p, u, s, w, rn, reglist } => {
+                // p = false
+                // u = true
+                // s = false
+                // w = true
+                let mut address = regfile.get_register(*rn);
+
+                if *p { unimplemented!() } // Not handling omitting rn yet
+                if *s { unimplemented!() } // Not handling s bit yet
+
+                for i in 0..14usize {
+                    if (reglist & (1 << i)) != 0 {
+                        let memory_value = memory.get_word(address as usize);
+                        regfile.set_register(i as u8, memory_value);
+                        if *u {
+                            address += 4;
+                        } else {
+                            address -= 4;
+                        }
+                    }
+                }
+                if (reglist & (1 << 15)) != 0 {
+                    let memory_value = memory.get_word(address as usize);
+                    regfile.set_pc(memory_value & 0xfffffffe);
+                    regfile.set_cpsr_bits(5, 1, memory_value & 0x1).expect("Error updating t-bit");
+                }
+
                 unimplemented!()
             }
             _ => unimplemented!(),
@@ -206,20 +254,34 @@ impl fmt::Display for InstrPayload {
             Self::BranchAndLink { offset } => {
                 write!(f, "Branch And Link (offset = {:#08x})", offset)
             }
-            Self::LSMultiple {
+            Self::LoadMultiple {
                 p,
                 u,
                 s,
                 w,
-                l,
                 rn,
                 reglist,
             } => {
                 //todo: Update printed output
                 write!(
                     f,
-                    "LSMU (p:{}) (u:{}) (s:{}) (w:{}) (l:{}) -> Store {} at Mem(R{}) TODO",
-                    p, u, s, w, l, reglist, rn
+                    "LDM (p:{}) (u:{}) (s:{}) (w:{}) -> Load {{{:#06x}}} at Mem(R{}) TODO",
+                    p, u, s, w, reglist, rn
+                )
+            }
+            Self::StoreMultiple {
+                p,
+                u,
+                s,
+                w,
+                rn,
+                reglist,
+            } => {
+                //todo: Update printed output
+                write!(
+                    f,
+                    "STM (p:{}) (u:{}) (s:{}) (w:{}) -> Store {{{:#06x}}} at Mem(R{}) TODO",
+                    p, u, s, w, reglist, rn
                 )
             }
             Self::SubI {
